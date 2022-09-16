@@ -28,7 +28,7 @@ builder.Services.AddDbContext<ShardContext>(opt => opt.UseInMemoryDatabase("Shar
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<MapGenerator>(MapGenerator.Random);
+builder.Services.AddSingleton<SectorSpecification>(MapGenerator.Random.Generate());
 
 var app = builder.Build();
 
