@@ -1,4 +1,6 @@
-﻿namespace Shard.API.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Shard.API.Models
 {
     public class Planet
     {

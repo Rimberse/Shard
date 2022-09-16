@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Shard.API.Tools;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Shard.API.Models

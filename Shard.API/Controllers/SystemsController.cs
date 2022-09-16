@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bogus.DataSets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,30 +15,44 @@ namespace Shard.API.Controllers
     public class SystemsController : ControllerBase
     {
         private readonly ShardContext _context;
+        private static Models.System system1 = new Models.System()
+        {
+            Name = "AD Leonis",
+            Planets = PlanetGenerator.GeneratePlanets(5)
+        };
+
+        private static Models.System system2 = new Models.System()
+        {
+            Name = "Luyten's Star",
+            Planets = PlanetGenerator.GeneratePlanets(5)
+        };
+
+        List<Models.System> systems = new List<Models.System>() { system1, system2 };
 
         // Constructor is called during the runtime
         public SystemsController(ShardContext context)
         {
             _context = context;
-            prepopulateContext();
+            //_context.systems = _context.Set<Models.System>();
+
+            //_context.Database.ExecuteSqlRaw("delete from MyTable");
+
+            //_context.systems.RemoveRange(_context.systems);
+            //_context.SaveChanges();
+
+            //var set = _context.Set<Models.System>();
+            //if (!set.Any())
+            //{
+            //prepopulateContext();
+            //}
         }
 
         // Prepopulates the context objects with given Systems and randomly generated planets within them
         // Used to have a pre-loaded test date in order to be able to test the API endpoints
         public async void prepopulateContext()
         {
-            _context.systems.Add(new Models.System()
-            {
-                Name = "AD Leonis",
-                Planets = PlanetGenerator.GeneratePlanets(5)
-            });
-
-            _context.systems.Add(new Models.System()
-            {
-                Name = "Luyten's Star",
-                Planets = PlanetGenerator.GeneratePlanets(5)
-            });
-
+            _context.systems.Add(system1);
+            _context.systems.Add(system2);
             await _context.SaveChangesAsync();
         }
 
@@ -45,32 +60,44 @@ namespace Shard.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Models.System>>> Getsystems()
         {
-          if (_context.systems == null)
-          {
-              return NotFound();
-          }
+            //if (_context.systems == null)
+            //{
+            //    return NotFound();
+            //}
 
-            Console.WriteLine(_context);
+            //  Console.WriteLine(_context);
 
-            return await _context.systems.ToListAsync();
+            //  return await _context.systems.ToListAsync();
+
+            return systems;
         }
 
         // GET: api/Systems/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Models.System>> GetSystem(int id)
+        [HttpGet("{systemName}")]
+        public async Task<ActionResult<Models.System>> GetSystem(string systemName)
         {
-          if (_context.systems == null)
-          {
-              return NotFound();
-          }
-            var system = await _context.systems.FindAsync(id);
+            //if (_context.systems == null)
+            //{
+            //    return NotFound();
+            //}
+            //  // var system = await _context.systems.FindAsync(systemName);
+            //  var system = await _context.systems.Include(system => system.Planets).FirstOrDefaultAsync(system => system.Name == systemName);
+
+            //  if (system == null)
+            //  {
+            //      return NotFound();
+            //  }
+
+            //  return system;
+
+            var system = systems.Find(system => system.Name == systemName);
 
             if (system == null)
             {
                 return NotFound();
             }
 
-            return system;
+             return system;
         }
 
         // PUT: api/Systems/5
