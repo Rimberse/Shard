@@ -6,7 +6,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shard.Shared.Web.Integratio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shard.Shared.Core", "Shard.Shared.Core\Shard.Shared.Core.csproj", "{7D73D8F4-7CA6-443D-AC94-5881C4C935FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shard.API", "Shard.API\Shard.API.csproj", "{A25B93E3-2A57-4BFE-9066-7A4B637E540B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shard.API", "Shard.API\Shard.API.csproj", "{A25B93E3-2A57-4BFE-9066-7A4B637E540B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shard.IntegrationTests", "Shard.IntegrationTests\Shard.IntegrationTests.csproj", "{5D052362-9ACA-4DD2-9628-C0AE1F395C31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{A25B93E3-2A57-4BFE-9066-7A4B637E540B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A25B93E3-2A57-4BFE-9066-7A4B637E540B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A25B93E3-2A57-4BFE-9066-7A4B637E540B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D052362-9ACA-4DD2-9628-C0AE1F395C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D052362-9ACA-4DD2-9628-C0AE1F395C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D052362-9ACA-4DD2-9628-C0AE1F395C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D052362-9ACA-4DD2-9628-C0AE1F395C31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
