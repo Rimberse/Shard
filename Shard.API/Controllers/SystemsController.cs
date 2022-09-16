@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shard.API.Models;
 using Shard.API.Tools;
+using Shard.Shared.Core;
 
 namespace Shard.API.Controllers
 {
@@ -14,7 +15,8 @@ namespace Shard.API.Controllers
     [ApiController]
     public class SystemsController : ControllerBase
     {
-        private readonly ShardContext _context;
+        private readonly SectorSpecification sectorSpecification;
+        //private readonly ShardContext _context;
         private static Models.System system1 = new Models.System()
         {
             Name = "AD Leonis",
@@ -30,9 +32,11 @@ namespace Shard.API.Controllers
         List<Models.System> systems = new List<Models.System>() { system1, system2 };
 
         // Constructor is called during the runtime
-        public SystemsController(ShardContext context)
+        public SystemsController(MapGenerator mapGenerator)
         {
-            _context = context;
+            sectorSpecification = mapGenerator.Generate();
+
+            //_context = context;
             //_context.systems = _context.Set<Models.System>();
 
             //_context.Database.ExecuteSqlRaw("delete from MyTable");
@@ -51,14 +55,14 @@ namespace Shard.API.Controllers
         // Used to have a pre-loaded test date in order to be able to test the API endpoints
         public async void prepopulateContext()
         {
-            _context.systems.Add(system1);
-            _context.systems.Add(system2);
-            await _context.SaveChangesAsync();
+            //_context.systems.Add(system1);
+            //_context.systems.Add(system2);
+            //await _context.SaveChangesAsync();
         }
 
         // GET: /Systems - Fetches all Systems and their Planets
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Models.System>>> Getsystems()
+        public IReadOnlyList<SystemSpecification> Getsystems()
         {
             //if (_context.systems == null)
             //{
@@ -67,9 +71,10 @@ namespace Shard.API.Controllers
 
             //  Console.WriteLine(_context);
 
-            //  return await _context.systems.ToListAsync();
+            // return await _context.systems.ToListAsync();
+            return sectorSpecification.Systems;
 
-            return systems;
+            //return systems;
         }
 
         // GET: /Systems/Name - Fetches a single system and all it's planets
@@ -166,7 +171,7 @@ namespace Shard.API.Controllers
             return NoContent();
         }
 
-        // POST: api/Systems
+        // POST: /Systems
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Models.System>> PostSystem(Models.System system)

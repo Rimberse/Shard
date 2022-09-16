@@ -1,5 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using Shard.API.Controllers;
 using Shard.API.Models;
+using Microsoft.Extensions.Configuration;
+using Bogus.DataSets;
+using Shard.API.Tools;
+using Shard.Shared.Core;
+
+//void ConfigureServices(IServiceCollection services)
+//{
+//    services.AddDbContext<ShardContext>(options =>
+//    options.UseSqlServer(Configuration["ConnectionStrings:DefaultConnection"]));
+//    services.AddMvc();
+//    services.AddScoped<SystemsController>();
+//}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +27,8 @@ builder.Services.AddDbContext<ShardContext>(opt => opt.UseInMemoryDatabase("Shar
 //});
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
+
+builder.Services.AddSingleton<MapGenerator>(MapGenerator.Random);
 
 var app = builder.Build();
 

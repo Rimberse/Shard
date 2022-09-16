@@ -16,7 +16,7 @@ namespace Shard.API.Tools
             {
                 Planets = new Faker<Planet>()
                 .RuleFor(planet => planet.Name, take => take.Name.FirstName())
-                .RuleFor(planet => planet.Size, take => take.Random.Int(10, 1000))
+                .RuleFor(planet => planet.Size, take => take.Random.Int(1000, 100000))
                 .Generate(count);
             }
 
