@@ -56,7 +56,7 @@ namespace Shard.API.Controllers
             await _context.SaveChangesAsync();
         }
 
-        // GET: Systems - Fetches all Systems and their Planets
+        // GET: /Systems - Fetches all Systems and their Planets
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Models.System>>> Getsystems()
         {
@@ -72,7 +72,7 @@ namespace Shard.API.Controllers
             return systems;
         }
 
-        // GET: api/Systems/5
+        // GET: /Systems/Name - Fetches a single system and all it's planets
         [HttpGet("{systemName}")]
         public async Task<ActionResult<Models.System>> GetSystem(string systemName)
         {
@@ -98,6 +98,20 @@ namespace Shard.API.Controllers
             }
 
              return system;
+        }
+
+        // GET: /Systems/Name/Planets - Fetches all planets of a single system
+        [HttpGet("{systemName}/planets")]
+        public async Task<ActionResult<IEnumerable<Planet>>> GetSystemPlanets(string systemName)
+        {
+            var system = systems.FirstOrDefault(system => system.Name == systemName);
+
+            if (system == null ||system.Planets == null)
+            {
+                return NotFound();
+            }
+
+            return system.Planets;
         }
 
         // PUT: api/Systems/5
