@@ -125,23 +125,27 @@ namespace Shard.API.Controllers
 
         // GET: /Systems/Name/Planets - Fetches a single planet of a system
         [HttpGet("{systemName}/planets/{planetName}")]
-        public async Task<ActionResult<Planet>> GetSystemPlanet(string systemName, string planetName)
+        public PlanetSpecification GetSystemPlanet(string systemName, string planetName)
         {
-            var system = systems.FirstOrDefault(system => system.Name == systemName);
+            //var system = systems.FirstOrDefault(system => system.Name == systemName);
 
-            if (system == null || system.Planets == null)
-            {
-                return NotFound();
-            }
+            //if (system == null || system.Planets == null)
+            //{
+            //    return NotFound();
+            //}
+
+            //var planet = system.Planets.FirstOrDefault(planet => planet.Name == planetName);
+
+            //if (planet == null)
+            //{
+            //    return NotFound();
+            //}
+
+            var system = systems.FirstOrDefault(system => system.Name == systemName);
 
             var planet = system.Planets.FirstOrDefault(planet => planet.Name == planetName);
 
-            if (planet == null)
-            {
-                return NotFound();
-            }
-
-            return null;
+            return planet;
         }
 
         // PUT: api/Systems/5
