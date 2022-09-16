@@ -109,7 +109,7 @@ namespace Shard.API.Controllers
 
         // GET: /Systems/Name/Planets - Fetches all planets of a single system
         [HttpGet("{systemName}/planets")]
-        public async Task<ActionResult<IEnumerable<Planet>>> GetSystemPlanets(string systemName)
+        public IReadOnlyList<PlanetSpecification> GetSystemPlanets(string systemName)
         {
             //var system = systems.FirstOrDefault(system => system.Name == systemName);
 
@@ -118,7 +118,9 @@ namespace Shard.API.Controllers
             //    return NotFound();
             //}
 
-            return null;
+            var system = systems.FirstOrDefault(system => system.Name == systemName);
+
+            return system.Planets;
         }
 
         // GET: /Systems/Name/Planets - Fetches a single planet of a system
