@@ -1,18 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using Shard.API.Controllers;
-using Shard.API.Models;
-using Microsoft.Extensions.Configuration;
-using Bogus.DataSets;
-using Shard.API.Tools;
 using Shard.Shared.Core;
 
-//void ConfigureServices(IServiceCollection services)
-//{
-//    services.AddDbContext<ShardContext>(options =>
-//    options.UseSqlServer(Configuration["ConnectionStrings:DefaultConnection"]));
-//    services.AddMvc();
-//    services.AddScoped<SystemsController>();
-//}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddDbContext<ShardContext>(opt => opt.UseInMemoryDatabase("Shard"));
 //builder.Services.AddSwaggerGen(c =>
 //{
 //    c.SwaggerDoc("v1", new() { Title = "ShardApi", Version = "v1" });
