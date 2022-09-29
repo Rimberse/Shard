@@ -1,3 +1,4 @@
+using Shard.API.Models;
 using Shard.Shared.Core;
 
 
@@ -14,7 +15,33 @@ builder.Services.AddControllers();
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
+// Generate users
+List<UserSpecification> users = new List<UserSpecification>()
+{
+    new UserSpecification()
+    {
+        
+    },
+    new UserSpecification()
+    {
+
+    },
+    new UserSpecification()
+    {
+
+    },
+    new UserSpecification()
+    {
+
+    },
+    new UserSpecification()
+    {
+
+    },
+};
+
 builder.Services.AddSingleton<SectorSpecification>(MapGenerator.Random.Generate());
+builder.Services.AddSingleton<List<UserSpecification>>(users);
 
 var app = builder.Build();
 
