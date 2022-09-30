@@ -19,10 +19,11 @@ namespace Shard.API.Models
             DateOfCreation = DateTime.Now;
         }
 
-       /* internal UserSpecification(string firstName, string lastName)
+        public UserSpecification(string id, string pseudo)
         {
-            UserSpecification userSpecification = new();
-            userSpecification.Id = firstName + '.' + lastName;
-        }*/
+            Id = id;
+            Pseudo = pseudo;
+            DateOfCreation = DateTime.Now;
+        }
     }
 }
