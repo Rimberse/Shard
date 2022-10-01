@@ -79,7 +79,43 @@ namespace Shard.API.Controllers
 
             var userUnits = (List<UnitSpecification>) units[user];
 
+            if (userUnits == null)
+            {
+                return NotFound();
+            }
+
             return userUnits;
+        }
+
+
+        // GET: /Users/{userId}/Units/{unitId} - returns information about one single unit of a user
+        [HttpGet("{userId}/Units/{unitId}")]
+        [ProducesResponseType(typeof(UnitSpecification), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<UnitSpecification> GetUnit(string userId, string unitId)
+        {
+            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+
+            if (user == null || units[user] == null)
+            {
+                return NotFound();
+            }
+
+            var userUnits = (List<UnitSpecification>) units[user];
+
+            if (userUnits == null)
+            {
+                return NotFound();
+            }
+
+            var unit = userUnits.FirstOrDefault(unit => unit.Id == unitId);
+
+            if (unit == null)
+            {
+                return NotFound();
+            }
+
+            return unit;
         }
     }
 }
