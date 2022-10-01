@@ -6,6 +6,7 @@ using Shard.Shared.Core;
 using System.Web;
 using System;
 using System.Collections;
+using Microsoft.CodeAnalysis.VisualBasic.Syntax;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -15,11 +16,13 @@ namespace Shard.API.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
+        private readonly SectorSpecification sector;
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
 
-        public UsersController(List<UserSpecification> initialUsers, Hashtable initialUnits)
+        public UsersController(SectorSpecification sectorSpecification, List<UserSpecification> initialUsers, Hashtable initialUnits)
         {
+            sector = sectorSpecification;
             users = initialUsers;
             units = initialUnits;
         }
@@ -157,6 +160,47 @@ namespace Shard.API.Controllers
             unit.Planet = unitSpecification.Planet;
 
             return user;
+        }
+
+
+        // GET: /Users/{userId}/Units/{unitId}/location - returns more detailed information about the location of unit
+        [HttpGet("{userId}/Units/{unitId}/location")]
+        [ProducesResponseType(typeof(LocationSpecification), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<LocationSpecification> GetLocation(string userId, string unitId)
+        {
+            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+
+            if (user == null || units[user] == null)
+            {
+                return NotFound();
+            }
+
+            var userUnits = (List<UnitSpecification>)units[user];
+
+            if (userUnits == null)
+            {
+                return NotFound();
+            }
+
+            var unit = userUnits.FirstOrDefault(unit => unit.Id == unitId);
+
+            if (unit == null)
+            {
+                return NotFound();
+            }
+
+            var system = sector.Systems.FirstOrDefault(system => system.Name == unit.System);
+
+            if (system == null)
+            {
+                return NotFound();
+            }
+
+            var planet = system.Planets.FirstOrDefault(planet => planet.Name == unit.Planet);
+            LocationSpecification location = new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
+
+            return location;
         }
     }
 }

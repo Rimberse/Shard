@@ -1,5 +1,8 @@
+using Microsoft.CodeAnalysis;
 using Shard.API.Models;
+using Shard.API.Tools;
 using Shard.Shared.Core;
+using System;
 using System.Collections;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,14 +25,14 @@ UserSpecification user3 = new UserSpecification();
 UserSpecification user4 = new UserSpecification();
 UserSpecification user5 = new UserSpecification();
 
-List<UserSpecification> users = new List<UserSpecification>()
-{
+List<UserSpecification> users = new List<UserSpecification>();
+/*{
     user1, user2, user3, user4, user5
-};
+};*/
 
 // Generate units
-Hashtable units = new Hashtable()
-{
+Hashtable units = new Hashtable();
+/*{
     {
         user1, new List<UnitSpecification>()
         {
@@ -64,9 +67,29 @@ Hashtable units = new Hashtable()
             new UnitSpecification("0abc-1def-2ghk", "secret", "unkown-worlds", "unkown")
         }
     }
-};
+};*/
 
-builder.Services.AddSingleton<SectorSpecification>(MapGenerator.Random.Generate());
+// Generate SectorSpecification
+SectorSpecification sectorSpecification = MapGenerator.Random.Generate();
+
+// Generate users, units & locations
+foreach (var system in sectorSpecification.Systems)
+{
+    var user = new UserSpecification();
+    users.Add(user);
+    var userUnits = new List<UnitSpecification>();
+
+    foreach (var planet in system.Planets)
+    {
+        var unit = new UnitSpecification(RandomIdGenerator.RandomString(10), "scout", system.Name, planet.Name);
+        userUnits.Add(unit);
+    }
+
+    units.Add(user, userUnits);
+    userUnits = new List<UnitSpecification>();
+}
+
+builder.Services.AddSingleton<SectorSpecification>(sectorSpecification);
 builder.Services.AddSingleton<List<UserSpecification>>(users);
 builder.Services.AddSingleton<Hashtable>(units);
 
