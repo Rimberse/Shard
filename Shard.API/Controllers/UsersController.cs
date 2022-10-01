@@ -117,5 +117,46 @@ namespace Shard.API.Controllers
 
             return unit;
         }
+
+
+        // PUT: /Users/{userId}/Units/{unitId} - changes the status of a unit of a user. Only changes system and planet which simulates moving
+        [HttpPut("{userId}/Units/{unitId}")]
+        [ProducesResponseType(typeof(UserSpecification), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<UserSpecification> PutUnit(string userId, string unitId, [FromBody] UnitSpecification unitSpecification)
+        {
+            if (HttpContext.Request.Body == null || unitSpecification == null || unitSpecification.Id != unitId)
+            {
+                return BadRequest();
+            }
+
+            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+
+            if (user == null || units[user] == null)
+            {
+                return NotFound();
+            }
+
+            var userUnits = (List<UnitSpecification>) units[user];
+
+            if (userUnits == null)
+            {
+                return NotFound();
+            }
+
+            var unit = userUnits.FirstOrDefault(unit => unit.Id == unitId);
+
+            if (unit == null)
+            {
+                return NotFound();
+            }
+
+            // Change the location of a unit
+            unit.System = unitSpecification.System;
+            unit.Planet = unitSpecification.Planet;
+
+            return user;
+        }
     }
 }
