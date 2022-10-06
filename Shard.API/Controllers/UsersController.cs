@@ -7,6 +7,8 @@ using System.Web;
 using System;
 using System.Collections;
 using Microsoft.CodeAnalysis.VisualBasic.Syntax;
+using System.Text.RegularExpressions;
+using Shard.API.Tools;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,11 +22,11 @@ namespace Shard.API.Controllers
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
 
-        public UsersController(SectorSpecification sectorSpecification, List<UserSpecification> initialUsers, Hashtable initialUnits)
+        public UsersController(DependencyInjector dependencyInjector)
         {
-            sector = sectorSpecification;
-            users = initialUsers;
-            units = initialUnits;
+            sector = dependencyInjector.sectorSpecification;
+            users = dependencyInjector.users;
+            units = dependencyInjector.units;
         }
 
 
@@ -54,7 +56,10 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public ActionResult<UserSpecification> Put(string id, [FromBody] UserSpecification userSpecification)
         {
-            if (userSpecification.Id == null || userSpecification.Pseudo == null || id != userSpecification.Id)
+            // Check if the id respects required format: any alphanumeric value
+            var regex = new Regex("^[a-zA-Z0-9-]*$");
+
+            if (userSpecification.Id == null || userSpecification.Pseudo == null || id != userSpecification.Id || !regex.Match(userSpecification.Id).Success)
             {
                 Response.StatusCode = (int) System.Net.HttpStatusCode.BadRequest;
                 return BadRequest();
@@ -62,6 +67,11 @@ namespace Shard.API.Controllers
 
             var user = new UserSpecification(userSpecification.Id, userSpecification.Pseudo);
             users.Add(user);
+            string system = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
+            units.Add(user, new List<UnitSpecification>()
+            {
+                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, "mars")
+            });
 
             return user;
         }
@@ -127,7 +137,7 @@ namespace Shard.API.Controllers
         [ProducesResponseType(typeof(UserSpecification), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<UserSpecification> PutUnit(string userId, string unitId, [FromBody] UnitSpecification unitSpecification)
+        public ActionResult<UnitSpecification> PutUnit(string userId, string unitId, [FromBody] UnitSpecification unitSpecification)
         {
             if (HttpContext.Request.Body == null || unitSpecification == null || unitSpecification.Id != unitId)
             {
@@ -156,10 +166,10 @@ namespace Shard.API.Controllers
             }
 
             // Change the location of a unit
-            unit.System = unitSpecification.System;
-            unit.Planet = unitSpecification.Planet;
+            unit.System = unitSpecification.System != null ? unitSpecification.System : unit.System;
+            unit.Planet = unitSpecification.Planet != null ? unitSpecification.Planet : unit.Planet;
 
-            return user;
+            return unit;
         }
 
 

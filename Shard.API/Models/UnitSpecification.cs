@@ -1,4 +1,5 @@
 ﻿using Bogus;
+using Shard.Shared.Core;
 using System;
 
 namespace Shard.API.Models
@@ -23,7 +24,7 @@ namespace Shard.API.Models
         {
             Random random = new Random();
             Id = id;
-            Type = type;
+            Type = "scout";
             System = system;
             Planet = planet;
         }
