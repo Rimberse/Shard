@@ -1,2 +1,2 @@
-Total: 0
-Succès: 0
+Total: 10
+Succès: 10
