@@ -21,6 +21,7 @@ namespace Shard.API.Controllers
         private readonly SectorSpecification sector;
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
+        private readonly List<BuildingSpecification> buildings;
 
         public UsersController(DependencyInjector dependencyInjector)
         {
@@ -68,9 +69,11 @@ namespace Shard.API.Controllers
             var user = new UserSpecification(userSpecification.Id, userSpecification.Pseudo);
             users.Add(user);
             string system = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
+            string system2 = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
             units.Add(user, new List<UnitSpecification>()
             {
-                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, "mars")
+                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, "mars"),
+                new UnitSpecification("2kl1o9aa-9c0z-439a-a50d-840azb9800c8", "builder", system2, "jupiter")
             });
 
             return user;
@@ -211,6 +214,32 @@ namespace Shard.API.Controllers
             LocationSpecification location = new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
 
             return location;
+        }
+
+
+        // POST /users/{userId}/Buildings
+        [HttpPost("{userId}/Buildings")]
+        [ProducesResponseType(typeof(BuildingSpecification), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<BuildingSpecification> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
+        {
+            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null)
+            {
+                return BadRequest();
+            }
+
+            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Creates a new building
+            BuildingSpecification building = new BuildingSpecification(buildingSpecification.Id, buildingSpecification.BuilderId, buildingSpecification.System, buildingSpecification.Planet);
+            buildings.Add(building);
+            return building;
         }
     }
 }

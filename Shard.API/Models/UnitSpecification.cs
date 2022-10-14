@@ -22,7 +22,7 @@ namespace Shard.API.Models
         public UnitSpecification(string id, string type, string system, string planet)
         {
             Id = id;
-            Type = "scout";
+            Type = type;
             System = system;
             Planet = planet;
         }
