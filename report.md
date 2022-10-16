@@ -2,16 +2,16 @@
 
 ## Qualité
 
-* Nommage variables: 1.0
-* Usage adéquat des fonctionnalités du langage: 1.0
-* Simplicité des fonctions: 1.0
-* Simplicité des classes: 1.0
-* Pas de dupplication de code: 1.0
-* Séparation de responsabilités: 1.0
-* Encapsulation: 1.0
+* Nommage variables: 0.8
+* Usage adéquat des fonctionnalités du langage: 0.9
+* Simplicité des fonctions: 0.7
+* Simplicité des classes: 0.9
+* Pas de dupplication de code: 0.9
+* Séparation de responsabilités: 0.7
+* Encapsulation: 0.9
 * Couverture de tests: 0.0
 
-Coefficient de qualité = 87.50%
+Coefficient de qualité = 72.50%
 
 ## Versions
 
@@ -45,6 +45,6 @@ Note intermédiaire = 10.0/10
 
 Sous-total: 12.9/13
 
-Impact qualité: 94%
+Impact qualité: 86%
 
-Total: 12.05/13
+Total: 11.09/13
