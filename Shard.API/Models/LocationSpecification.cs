@@ -6,7 +6,13 @@ namespace Shard.API.Models
     {
         public string? System { get; set; }
         public string? Planet { get; set; }
-        public IReadOnlyDictionary<string, int> ResourcesQuantity { get; set; }
+        public IReadOnlyDictionary<string, int>? ResourcesQuantity { get; set; }
+
+        public LocationSpecification(string? system, string? planet)
+        {
+            System = system;
+            Planet = planet;
+        }
 
         public LocationSpecification(string? system, string? planet, IReadOnlyDictionary<ResourceKind, int> resourcesQuantity)
         {

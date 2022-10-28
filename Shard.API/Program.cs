@@ -19,6 +19,7 @@ builder.Services.AddControllers();
 //builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<DependencyInjector>(new DependencyInjector());
+builder.Services.AddSingleton<IClock>(new SystemClock());
 
 var app = builder.Build();
 

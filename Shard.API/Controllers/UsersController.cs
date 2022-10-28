@@ -9,6 +9,7 @@ using System.Collections;
 using Microsoft.CodeAnalysis.VisualBasic.Syntax;
 using System.Text.RegularExpressions;
 using Shard.API.Tools;
+using System.Timers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -21,13 +22,16 @@ namespace Shard.API.Controllers
         private readonly SectorSpecification sector;
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
-        private readonly List<BuildingSpecification> buildings;
+        private readonly List<Building> buildings;
+        private readonly IClock timer;
 
-        public UsersController(DependencyInjector dependencyInjector)
+        public UsersController(DependencyInjector dependencyInjector, IClock systemClock)
         {
             sector = dependencyInjector.sectorSpecification;
             users = dependencyInjector.users;
             units = dependencyInjector.units;
+            timer = systemClock;
+            buildings = new List<Building>();
         }
 
 
@@ -68,12 +72,14 @@ namespace Shard.API.Controllers
 
             var user = new UserSpecification(userSpecification.Id, userSpecification.Pseudo);
             users.Add(user);
+
             string system = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
-            string system2 = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
+
+
             units.Add(user, new List<UnitSpecification>()
             {
-                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, "mars"),
-                new UnitSpecification("2kl1o9aa-9c0z-439a-a50d-840azb9800c8", "builder", system2, "jupiter")
+                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, null, system, null),
+                new UnitSpecification("2kl1o9aa-9c0z-439a-a50d-840azb9800c8", "builder", system, null, system, null)
             });
 
             return user;
@@ -108,7 +114,7 @@ namespace Shard.API.Controllers
         [HttpGet("{userId}/Units/{unitId}")]
         [ProducesResponseType(typeof(UnitSpecification), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<UnitSpecification> GetUnit(string userId, string unitId)
+        public async Task<ActionResult<UnitSpecification>> GetUnit(string userId, string unitId)
         {
             var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
@@ -131,7 +137,29 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
+            if (unit.runningTask != null)
+            {
+                if (unit.taskWaitTime - timer.Now.Ticks <= 2000)
+                    await unit.runningTask;
+            }
+
             return unit;
+        }
+
+
+        public async Task moveUnitBackgroundTask(UnitSpecification unit, Boolean systemChanged, Boolean planetChanged)
+        {
+            if (systemChanged) 
+            {
+                await timer.Delay(60000);
+                unit.System = unit.DestinationSystem;
+            }
+            
+            if (planetChanged)
+            {
+                await timer.Delay(15000);
+                unit.Planet = unit.DestinationPlanet;
+            }
         }
 
 
@@ -169,8 +197,26 @@ namespace Shard.API.Controllers
             }
 
             // Change the location of a unit
-            unit.System = unitSpecification.System != null ? unitSpecification.System : unit.System;
-            unit.Planet = unitSpecification.Planet != null ? unitSpecification.Planet : unit.Planet;
+            Boolean systemChanged = false;
+            Boolean planetChanged = false;
+            unit.taskWaitTime = timer.Now.Ticks;
+
+            if (unit.System != unitSpecification.DestinationSystem)
+            {
+                systemChanged = true;
+                unit.taskWaitTime = unit.taskWaitTime + 60000;
+            }
+
+            if (unit.Planet != unitSpecification.DestinationPlanet)
+            {
+                planetChanged = true;
+                unit.taskWaitTime =  unit.taskWaitTime + 15000;
+            }
+
+            unit.DestinationSystem = unitSpecification.DestinationSystem;
+            unit.DestinationPlanet = unitSpecification.DestinationPlanet;
+
+            unit.runningTask = moveUnitBackgroundTask(unit, systemChanged, planetChanged);
 
             return unit;
         }
@@ -211,7 +257,7 @@ namespace Shard.API.Controllers
             }
 
             var planet = system.Planets.FirstOrDefault(planet => planet.Name == unit.Planet);
-            LocationSpecification location = new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
+            LocationSpecification location = unit.Type == "builder" ? new LocationSpecification(system.Name, planet.Name) : new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
 
             return location;
         }
@@ -222,13 +268,8 @@ namespace Shard.API.Controllers
         [ProducesResponseType(typeof(BuildingSpecification), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<BuildingSpecification> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
+        public ActionResult<Building> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
         {
-            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null)
-            {
-                return BadRequest();
-            }
-
             var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
             if (user == null)
@@ -236,8 +277,21 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
+            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null)
+            {
+                return BadRequest();
+            }
+
+            // Find associated unit and use it as a resource to build a new building
+            var unit = ((List<UnitSpecification>)units[user]).FirstOrDefault(unit => unit.Id == buildingSpecification.BuilderId);
+
+            if (unit == null || unit.Type != "builder" || unit.Planet == null)
+            {
+                return BadRequest();
+            }
+
             // Creates a new building
-            BuildingSpecification building = new BuildingSpecification(buildingSpecification.Id, buildingSpecification.BuilderId, buildingSpecification.System, buildingSpecification.Planet);
+            Building building = new Building(buildingSpecification.Id, buildingSpecification.Type, unit.System, unit.Planet);
             buildings.Add(building);
             return building;
         }

@@ -30,7 +30,7 @@ namespace Shard.API.Tools
 
                 foreach (var planet in system.Planets)
                 {
-                    var unit = new UnitSpecification(RandomIdGenerator.RandomString(10), "scout", system.Name, planet.Name);
+                    var unit = new UnitSpecification(RandomIdGenerator.RandomString(10), "scout", system.Name, planet.Name, system.Name, planet.Name);
                     userUnits.Add(unit);
                 }
 
