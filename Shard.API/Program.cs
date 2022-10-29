@@ -1,5 +1,9 @@
+using Microsoft.CodeAnalysis;
+using Shard.API.Models;
+using Shard.API.Tools;
 using Shard.Shared.Core;
-
+using System;
+using System.Collections;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +18,7 @@ builder.Services.AddControllers();
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<SectorSpecification>(MapGenerator.Random.Generate());
+builder.Services.AddSingleton<DependencyInjector>(new DependencyInjector());
 
 var app = builder.Build();
 
