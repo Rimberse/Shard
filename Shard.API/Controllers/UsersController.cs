@@ -1,15 +1,9 @@
-﻿using Bogus.DataSets;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.Mvc;
 using Shard.API.Models;
 using Shard.Shared.Core;
-using System.Web;
-using System;
 using System.Collections;
-using Microsoft.CodeAnalysis.VisualBasic.Syntax;
 using System.Text.RegularExpressions;
 using Shard.API.Tools;
-using System.Timers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -23,14 +17,14 @@ namespace Shard.API.Controllers
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
         private readonly List<Building> buildings;
-        private readonly IClock timer;
+        private readonly IClock clock;
 
-        public UsersController(DependencyInjector dependencyInjector, IClock systemClock)
+        public UsersController(SectorSpecification sector, List<UserSpecification> users, Hashtable units, IClock systemClock)
         {
-            sector = dependencyInjector.sectorSpecification;
-            users = dependencyInjector.users;
-            units = dependencyInjector.units;
-            timer = systemClock;
+            this.sector = sector;
+            this.users = users;
+            this.units = units;
+            clock = systemClock;
             buildings = new List<Building>();
         }
 
@@ -139,7 +133,11 @@ namespace Shard.API.Controllers
 
             if (unit.runningTask != null)
             {
-                if (unit.taskWaitTime - timer.Now.Ticks <= 2000)
+                DateTime now = clock.Now;
+                // Get current time representation in seconds
+                int time = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
+
+                if (unit.taskWaitTime - time <= 2)
                     await unit.runningTask;
             }
 
@@ -151,13 +149,13 @@ namespace Shard.API.Controllers
         {
             if (systemChanged) 
             {
-                await timer.Delay(60000);
+                await clock.Delay(60000);
                 unit.System = unit.DestinationSystem;
             }
             
             if (planetChanged)
             {
-                await timer.Delay(15000);
+                await clock.Delay(15000);
                 unit.Planet = unit.DestinationPlanet;
             }
         }
@@ -199,18 +197,20 @@ namespace Shard.API.Controllers
             // Change the location of a unit
             Boolean systemChanged = false;
             Boolean planetChanged = false;
-            unit.taskWaitTime = timer.Now.Ticks;
+
+            DateTime now = clock.Now;
+            unit.taskWaitTime = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
 
             if (unit.System != unitSpecification.DestinationSystem)
             {
                 systemChanged = true;
-                unit.taskWaitTime = unit.taskWaitTime + 60000;
+                unit.taskWaitTime = unit.taskWaitTime + 60;
             }
 
             if (unit.Planet != unitSpecification.DestinationPlanet)
             {
                 planetChanged = true;
-                unit.taskWaitTime =  unit.taskWaitTime + 15000;
+                unit.taskWaitTime =  unit.taskWaitTime + 15;
             }
 
             unit.DestinationSystem = unitSpecification.DestinationSystem;

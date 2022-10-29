@@ -6,8 +6,8 @@ namespace Shard.API.Models
 {
     public class UnitSpecification
     {
-        public string? Id { get; set; }
-        public string? Type { get; set; }
+        public string Id { get; set; }
+        public string Type { get; set; }
         public string System { get; set; }
         public string? Planet { get; set; }
         public string DestinationSystem { get; set; }
