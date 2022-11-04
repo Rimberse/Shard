@@ -13,7 +13,7 @@ namespace Shard.API.Models
         public string DestinationSystem { get; set; }
         public string? DestinationPlanet { get; set; }
         public Task? runningTask { get; set; }
-        public long? taskWaitTime { get; set; }
+        public long taskWaitTime { get; set; }
 
         internal UnitSpecification()
         {

@@ -19,13 +19,13 @@ namespace Shard.API.Controllers
         private readonly List<Building> buildings;
         private readonly IClock clock;
 
-        public UsersController(SectorSpecification sector, List<UserSpecification> users, Hashtable units, IClock systemClock)
+        public UsersController(SectorSpecification sector, List<UserSpecification> users, Hashtable units, List<Building> buildings, IClock systemClock)
         {
             this.sector = sector;
             this.users = users;
             this.units = units;
             clock = systemClock;
-            buildings = new List<Building>();
+            this.buildings = buildings;
         }
 
 
@@ -263,12 +263,18 @@ namespace Shard.API.Controllers
         }
 
 
+        public async Task buildBuildingBackgroundTask()
+        {
+            await clock.Delay(300000);
+        }
+
+
         // POST /users/{userId}/Buildings
         [HttpPost("{userId}/Buildings")]
         [ProducesResponseType(typeof(BuildingSpecification), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<Building> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
+        public async Task<ActionResult<Building>> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
         {
             var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
@@ -277,7 +283,8 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
-            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null)
+            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null
+                || !buildingSpecification.Resources.ContainsKey(buildingSpecification.ResourceCategory))
             {
                 return BadRequest();
             }
@@ -290,9 +297,38 @@ namespace Shard.API.Controllers
                 return BadRequest();
             }
 
+            // await clock.Delay(300000);
+            
             // Creates a new building
-            Building building = new Building(buildingSpecification.Id, buildingSpecification.Type, unit.System, unit.Planet);
+            Building building = new Building(buildingSpecification.Id, buildingSpecification.Type, unit.System, unit.Planet, buildingSpecification.ResourceCategory, new DateTime().AddMinutes(5).AddSeconds((double) unit.taskWaitTime));
             buildings.Add(building);
+            return building;
+        }
+
+
+        // GET /users/{userId}/Buildings
+        [HttpGet("{userId}/Buildings")]
+        [ProducesResponseType(typeof(List<Building>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<List<Building>> GetBuildings(string userId)
+        {
+            return buildings;
+        }
+
+
+        // GET /users/{userId}/Buildings/{buildingId}
+        [HttpGet("{userId}/Buildings/{buildingId}")]
+        [ProducesResponseType(typeof(Building), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<Building> GetBuilding(string userId, string buildingId)
+        {
+            var building = buildings.FirstOrDefault(building => building.Id == buildingId);
+
+            if (buildingId == null || building == null)
+            {
+                return NotFound();
+            }
+
             return building;
         }
     }

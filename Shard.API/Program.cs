@@ -25,6 +25,8 @@ SectorSpecification sectorSpecification = MapGenerator.Random.Generate();
 List<UserSpecification> users = new List<UserSpecification>();
 // Create units hashtable
 Hashtable units = new Hashtable();
+// Create List of buildings
+List<Building> buildings = new List<Building>();
 
 // Generate users, units & locations
 foreach (var system in sectorSpecification.Systems)
@@ -46,6 +48,7 @@ foreach (var system in sectorSpecification.Systems)
 builder.Services.AddSingleton<SectorSpecification>(sectorSpecification);
 builder.Services.AddSingleton<List<UserSpecification>>(users);
 builder.Services.AddSingleton<Hashtable>(units);
+builder.Services.AddSingleton<List<Building>>(buildings);
 builder.Services.AddSingleton<IClock>(new SystemClock());
 
 var app = builder.Build();
