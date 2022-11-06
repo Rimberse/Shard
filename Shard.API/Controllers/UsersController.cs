@@ -1,12 +1,7 @@
-﻿using Bogus.DataSets;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.Mvc;
 using Shard.API.Models;
 using Shard.Shared.Core;
-using System.Web;
-using System;
 using System.Collections;
-using Microsoft.CodeAnalysis.VisualBasic.Syntax;
 using System.Text.RegularExpressions;
 using Shard.API.Tools;
 
@@ -21,12 +16,16 @@ namespace Shard.API.Controllers
         private readonly SectorSpecification sector;
         private readonly List<UserSpecification> users;
         private readonly Hashtable units;
+        private readonly List<Building> buildings;
+        private readonly IClock clock;
 
-        public UsersController(DependencyInjector dependencyInjector)
+        public UsersController(SectorSpecification sector, List<UserSpecification> users, Hashtable units, IClock systemClock)
         {
-            sector = dependencyInjector.sectorSpecification;
-            users = dependencyInjector.users;
-            units = dependencyInjector.units;
+            this.sector = sector;
+            this.users = users;
+            this.units = units;
+            clock = systemClock;
+            buildings = new List<Building>();
         }
 
 
@@ -67,10 +66,14 @@ namespace Shard.API.Controllers
 
             var user = new UserSpecification(userSpecification.Id, userSpecification.Pseudo);
             users.Add(user);
+
             string system = sector.Systems[new Random().Next(1, sector.Systems.Count)].Name;
+
+
             units.Add(user, new List<UnitSpecification>()
             {
-                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, "mars")
+                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system, null, system, null),
+                new UnitSpecification("2kl1o9aa-9c0z-439a-a50d-840azb9800c8", "builder", system, null, system, null)
             });
 
             return user;
@@ -105,7 +108,7 @@ namespace Shard.API.Controllers
         [HttpGet("{userId}/Units/{unitId}")]
         [ProducesResponseType(typeof(UnitSpecification), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<UnitSpecification> GetUnit(string userId, string unitId)
+        public async Task<ActionResult<UnitSpecification>> GetUnit(string userId, string unitId)
         {
             var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
@@ -128,7 +131,33 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
+            if (unit.runningTask != null)
+            {
+                DateTime now = clock.Now;
+                // Get current time representation in seconds
+                int time = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
+
+                if (unit.taskWaitTime - time <= 2)
+                    await unit.runningTask;
+            }
+
             return unit;
+        }
+
+
+        public async Task moveUnitBackgroundTask(UnitSpecification unit, Boolean systemChanged, Boolean planetChanged)
+        {
+            if (systemChanged) 
+            {
+                await clock.Delay(60000);
+                unit.System = unit.DestinationSystem;
+            }
+            
+            if (planetChanged)
+            {
+                await clock.Delay(15000);
+                unit.Planet = unit.DestinationPlanet;
+            }
         }
 
 
@@ -166,8 +195,28 @@ namespace Shard.API.Controllers
             }
 
             // Change the location of a unit
-            unit.System = unitSpecification.System != null ? unitSpecification.System : unit.System;
-            unit.Planet = unitSpecification.Planet != null ? unitSpecification.Planet : unit.Planet;
+            Boolean systemChanged = false;
+            Boolean planetChanged = false;
+
+            DateTime now = clock.Now;
+            unit.taskWaitTime = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
+
+            if (unit.System != unitSpecification.DestinationSystem)
+            {
+                systemChanged = true;
+                unit.taskWaitTime = unit.taskWaitTime + 60;
+            }
+
+            if (unit.Planet != unitSpecification.DestinationPlanet)
+            {
+                planetChanged = true;
+                unit.taskWaitTime =  unit.taskWaitTime + 15;
+            }
+
+            unit.DestinationSystem = unitSpecification.DestinationSystem;
+            unit.DestinationPlanet = unitSpecification.DestinationPlanet;
+
+            unit.runningTask = moveUnitBackgroundTask(unit, systemChanged, planetChanged);
 
             return unit;
         }
@@ -208,9 +257,43 @@ namespace Shard.API.Controllers
             }
 
             var planet = system.Planets.FirstOrDefault(planet => planet.Name == unit.Planet);
-            LocationSpecification location = new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
+            LocationSpecification location = unit.Type == "builder" ? new LocationSpecification(system.Name, planet.Name) : new LocationSpecification(system.Name, planet.Name, planet.ResourceQuantity);
 
             return location;
+        }
+
+
+        // POST /users/{userId}/Buildings
+        [HttpPost("{userId}/Buildings")]
+        [ProducesResponseType(typeof(BuildingSpecification), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<Building> Post(string userId, [FromBody] BuildingSpecification buildingSpecification)
+        {
+            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            if (HttpContext.Request.Body == null || buildingSpecification == null || buildingSpecification.Type != "mine" || buildingSpecification.BuilderId == null)
+            {
+                return BadRequest();
+            }
+
+            // Find associated unit and use it as a resource to build a new building
+            var unit = ((List<UnitSpecification>)units[user]).FirstOrDefault(unit => unit.Id == buildingSpecification.BuilderId);
+
+            if (unit == null || unit.Type != "builder" || unit.Planet == null)
+            {
+                return BadRequest();
+            }
+
+            // Creates a new building
+            Building building = new Building(buildingSpecification.Id, buildingSpecification.Type, unit.System, unit.Planet);
+            buildings.Add(building);
+            return building;
         }
     }
 }

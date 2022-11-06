@@ -8,7 +8,24 @@ namespace Shard.API.Models
         public string? Id { get; set; }
         public string? Pseudo { get; set; }
         public DateTime DateOfCreation { get; }
-        
+        public IReadOnlyDictionary<string, int> ResourcesQuantity { get; set; }
+
+        private Dictionary<string, int> initiliazeResources()
+        {
+            Dictionary<string, int> resources = new Dictionary<string, int>()
+            {
+                { "aluminium", 0 },
+                { "carbon", 20 },
+                { "gold", 0 },
+                { "iron", 10 },
+                { "oxygen", 50 },
+                { "titanium", 0 },
+                { "water", 50 }
+            };
+
+            return resources;
+        }
+
         internal UserSpecification()
         {
             Faker faker = new Faker();
@@ -17,6 +34,7 @@ namespace Shard.API.Models
             Id = firstName + '.' + lastName;
             Pseudo = firstName;
             DateOfCreation = DateTime.Now;
+            ResourcesQuantity = initiliazeResources();
         }
 
         public UserSpecification(string id, string pseudo)
@@ -24,6 +42,7 @@ namespace Shard.API.Models
             Id = id;
             Pseudo = pseudo;
             DateOfCreation = DateTime.Now;
+            ResourcesQuantity = initiliazeResources();
         }
     }
 }

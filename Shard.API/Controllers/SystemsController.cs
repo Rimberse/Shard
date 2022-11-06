@@ -18,9 +18,9 @@ namespace Shard.API.Controllers
         private readonly IReadOnlyList<SystemSpecification> systems;
         private readonly IReadOnlyList<SystemWithoutPlanetResourcesSpecification> systemsWithoutPlanetResources;
 
-        public SystemsController(DependencyInjector dependencyInjector)
+        public SystemsController(SectorSpecification sectorSpecification)
         {
-            systems = dependencyInjector.sectorSpecification.Systems;
+            systems = sectorSpecification.Systems;
 
             List<SystemWithoutPlanetResourcesSpecification> systemsWithoutPlanetResourcesList = new List<SystemWithoutPlanetResourcesSpecification>();
 

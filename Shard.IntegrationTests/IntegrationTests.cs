@@ -16,12 +16,9 @@ public class IntegrationTests : BaseIntegrationTests<Program>
     public IntegrationTests(WebApplicationFactory<Program> factory, ITestOutputHelper testOutputHelper) : base(factory, testOutputHelper)
     {
         [Fact]
-        async Task GenerateDependencyInjection()
+        async Task RandomStringTest()
         {
-            DependencyInjector di = new DependencyInjector();
-            Assert.NotNull(di.sectorSpecification);
-            Assert.NotNull(di.users);
-            Assert.NotNull(di.units);
+            Assert.NotEqual(RandomIdGenerator.RandomString(5), RandomIdGenerator.RandomString(5));
         }
     }
 }
