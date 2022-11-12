@@ -8,9 +8,9 @@ namespace Shard.API.Models
         public string? Id { get; set; }
         public string? Pseudo { get; set; }
         public DateTime DateOfCreation { get; }
-        public IReadOnlyDictionary<string, int> ResourcesQuantity { get; set; }
+        public Dictionary<string, int> ResourcesQuantity { get; set; }
 
-        private Dictionary<string, int> initiliazeResources()
+        public static Dictionary<string, int> initiliazeResources()
         {
             Dictionary<string, int> resources = new Dictionary<string, int>()
             {
