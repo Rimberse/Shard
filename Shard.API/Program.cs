@@ -95,6 +95,7 @@ builder.Services.AddSingleton<Dictionary<UserSpecification, List<Building>>>(use
 builder.Services.AddSingleton<IClock>(new SystemClock());
 builder.Services.AddSingleton<List<ResourceKind>>(new List<ResourceKind>());
 builder.Services.AddSingleton<List<int>>(new List<int>());
+builder.Services.AddSingleton<CancellationTokenSource>(new CancellationTokenSource());
 
 var app = builder.Build();
 

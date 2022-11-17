@@ -5,6 +5,7 @@ using System.Collections;
 using System.Resources;
 using System.Security.Cryptography.Xml;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -22,8 +23,9 @@ namespace Shard.API.Controllers
         private readonly IClock clock;
         private readonly List<ResourceKind> extractedResources;
         private readonly List<int> extractionTimes;
+        private readonly CancellationTokenSource cancellationTokenSource;
 
-        public UsersController(SectorSpecification sector, List<Systems> systems, List<UserSpecification> users, Hashtable units, Dictionary<UserSpecification, List<Building>> userBuildings, IClock systemClock, List<ResourceKind> extractedResources, List<int> extractionTimes)
+        public UsersController(SectorSpecification sector, List<Systems> systems, List<UserSpecification> users, Hashtable units, Dictionary<UserSpecification, List<Building>> userBuildings, IClock systemClock, List<ResourceKind> extractedResources, List<int> extractionTimes, CancellationTokenSource cancellationTokenSource)
         {
             this.systems = systems;
             this.sector = sector;
@@ -33,6 +35,7 @@ namespace Shard.API.Controllers
             this.userBuildings = userBuildings;
             this.extractedResources = extractedResources;
             this.extractionTimes = extractionTimes;
+            this.cancellationTokenSource = cancellationTokenSource;
         }
 
 
@@ -302,13 +305,7 @@ namespace Shard.API.Controllers
                 if (unit.taskWaitTime - time <= 2)
                 {
                     await unit.runningTask;
-
-                   /* Building building = userBuildings[user].FirstOrDefault(building => building.UnitUsed.Id == unit.Id);
-
-                    if (building != null && building.IsBuilt == false)
-                    {
-                        building.cancellationToken.Cancel();
-                    }*/
+                    cancellationTokenSource.Cancel();
                 }
             }
 
@@ -504,15 +501,10 @@ namespace Shard.API.Controllers
             return userBuildings[user];
         }
 
-        public async Task buildBuildingBackgroundTask()
-        {
-            await clock.Delay(300000);
-        }
-
 
         public async Task updateBuildingProgressStatus(Building building, int delayTime)
         {
-            await clock.Delay(delayTime);
+            await clock.Delay(delayTime, cancellationTokenSource.Token);
 
             /*if (building.UnitUsed.DestinationPlanet == null)
             {
@@ -570,7 +562,32 @@ namespace Shard.API.Controllers
 
                     //CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
                     //building.cancellationToken = cancellationTokenSource;
-                    await updateBuildingProgressStatus(building, (int)time.TotalMilliseconds);
+                    try
+                    {
+                        //await updateBuildingProgressStatus(building, (int)time.TotalMilliseconds);
+
+                        while (building.EstimatedBuildTime - clock.Now >= TimeSpan.Zero)
+                        {
+                            try
+                            {
+                                int miliseconds = (int)((TimeSpan)(building.EstimatedBuildTime - clock.Now)).TotalMilliseconds;
+                                await clock.Delay((miliseconds > 500 ? 500 : miliseconds), cancellationTokenSource.Token);
+                            }
+                            catch (Exception)
+                            {
+                                return NotFound();
+                            }
+                        }
+                    } catch (TaskCanceledException)
+                    {
+                        if (cancellationTokenSource.IsCancellationRequested)
+                        {
+                            return NotFound();
+                        }
+                    }
+
+                    building.IsBuilt = true;
+                    building.EstimatedBuildTime = null;
                 }
             }
 
