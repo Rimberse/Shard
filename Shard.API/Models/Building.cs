@@ -11,8 +11,9 @@
         public DateTime? EstimatedBuildTime { get; set; }
         public UnitSpecification UnitUsed { get; set; }
         //public CancellationTokenSource cancellationToken { get; set; }
+        public Task ConstructionTask { get; set; } = null!;
 
-        public Building(string id, string type, string system, string planet, string resourceCategory, DateTime estimatedBuildTime, UnitSpecification unitUsed)
+        public Building(string id, string type, string system, string planet, string resourceCategory, DateTime? estimatedBuildTime, UnitSpecification unitUsed)
         {
             Id = id;
             Type = type;
@@ -22,6 +23,7 @@
             IsBuilt = false;
             EstimatedBuildTime = estimatedBuildTime;
             UnitUsed = unitUsed;
+            ConstructionTask = null;
             //cancellationToken = new CancellationTokenSource();
         }
     }

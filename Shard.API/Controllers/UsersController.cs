@@ -63,8 +63,8 @@ namespace Shard.API.Controllers
             // Calculate the time required to build user's buildings, await necessary time, attribute resource to user
             foreach (var building in userBuildings[user])
             {
-                TimeSpan time = (TimeSpan) (clock.Now - building.EstimatedBuildTime);
-                int minutes = (int) time.TotalMinutes;
+                TimeSpan time = (TimeSpan)(clock.Now - building.EstimatedBuildTime);
+                int minutes = (int)time.TotalMinutes;
 
                 if (time > TimeSpan.FromMinutes(0))
                 {
@@ -165,7 +165,8 @@ namespace Shard.API.Controllers
                                 }
                             }
 
-                        } else if (building.ResourceCategory == "liquid" || building.ResourceCategory == "gaseous")
+                        }
+                        else if (building.ResourceCategory == "liquid" || building.ResourceCategory == "gaseous")
                         {
                             foreach (KeyValuePair<ResourceKind, int> resourceQuantity in resourcesQuantity)
                             {
@@ -231,14 +232,13 @@ namespace Shard.API.Controllers
             users.Add(user);
             userBuildings.Add(user, new List<Building>());
 
-            //Systems system = systems[new Random().Next(1, systems.Count)];
             SystemSpecification system = sector.Systems[new Random().Next(1, sector.Systems.Count)];
 
 
             units.Add(user, new List<UnitSpecification>()
             {
-                new UnitSpecification("9cc8f0cc-5b4c-439a-b60c-398bfb7600a6", "scout", system.Name, null, system.Name, null),
-                new UnitSpecification("2kl1o9aa-9c0z-439a-a50d-840azb9800c8", "builder", system.Name, null, system.Name, null)
+                new UnitSpecification(Guid.NewGuid().ToString(), "scout", system.Name, null, system.Name, null),
+                new UnitSpecification(Guid.NewGuid().ToString(), "builder", system.Name, null, system.Name, null)
             });
 
             return user;
@@ -275,7 +275,7 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UnitSpecification>> GetUnit(string userId, string unitId)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            UserSpecification user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
             if (user == null || units[user] == null)
             {
@@ -305,7 +305,6 @@ namespace Shard.API.Controllers
                 if (unit.taskWaitTime - time <= 2)
                 {
                     await unit.runningTask;
-                    cancellationTokenSource.Cancel();
                 }
             }
 
@@ -313,7 +312,7 @@ namespace Shard.API.Controllers
         }
 
 
-        public async Task moveUnitBackgroundTask(UnitSpecification unit, Boolean systemChanged, Boolean planetChanged)
+        private async Task moveUnitBackgroundTask(UnitSpecification unit, Boolean systemChanged, Boolean planetChanged)
         {
             if (systemChanged)
             {
@@ -361,6 +360,23 @@ namespace Shard.API.Controllers
             {
                 return NotFound();
             }
+
+            if (userBuildings.ContainsKey(user))
+            {
+                var buildings = userBuildings[user].Where(b => b.UnitUsed.Id == unitId).ToList();
+                foreach (var building in buildings.Where(building =>
+                             (unit!.Planet != unit.DestinationPlanet && unit.Planet == building.Planet && !building.IsBuilt) ||
+                             (unit.System != unit.DestinationSystem && unit.System == building.System && !building.IsBuilt)))
+                {
+                    userBuildings[user].Remove(building);
+                }
+            }
+
+            //var building = userBuildings[user].FirstOrDefault(building => building.UnitUsed.Id == unitId);
+            /*if (!unit.ConstructedBuilding.IsBuilt)
+            {*/
+            //cancellationTokenSource.Cancel();
+            //}
 
             // Change the location of a unit
             Boolean systemChanged = false;
@@ -431,6 +447,27 @@ namespace Shard.API.Controllers
         }
 
 
+        private async Task buildBuildingBackgroundTask(Building building, int estimatedMoveTime, UserSpecification user)
+        {
+            /*await Task.Run(async () =>
+            {
+                var temp = userBuildings[user].First(b => b.Id == building.Id);
+                if (temp != null)
+                {
+                    await clock.Delay(TimeSpan.FromMinutes(5));
+                    building.IsBuilt = true;
+                    building.EstimatedBuildTime = null;
+                    building.ConstructionTask = null;
+                }
+            });*/
+
+            await clock.Delay(300000 + (estimatedMoveTime * 1000));
+            building.IsBuilt = true;
+            building.EstimatedBuildTime = null;
+            building.ConstructionTask = null;
+        }
+
+
         // POST /users/{userId}/Buildings
         [HttpPost("{userId}/Buildings")]
         [ProducesResponseType(typeof(BuildingSpecification), StatusCodes.Status201Created)]
@@ -460,10 +497,11 @@ namespace Shard.API.Controllers
             }
 
             // JSON payload can contain nullable Id field, hence the verification step to ensure we are buulding with a valid Id
-            string buildingId = (buildingSpecification.Id) == null ? "3kgl9f1aa-7h3c-b987-b60c-b198fb12300z0" : buildingSpecification.Id;
+            string buildingId = (buildingSpecification.Id) == null ? Guid.NewGuid().ToString() : buildingSpecification.Id;
 
             // Creates a new building
             Building building = new Building(buildingId, buildingSpecification.Type, unit.System, unit.Planet, buildingSpecification.ResourceCategory, new DateTime().AddMinutes(5).AddSeconds((double)unit.taskWaitTime), unit);
+            //building.ConstructionTask = buildBuildingBackgroundTask(building, (int) unit.taskWaitTime, user);
 
             List<Building> buildings;
             if (userBuildings[user] == null)
@@ -481,6 +519,7 @@ namespace Shard.API.Controllers
             }
 
             userBuildings[user] = buildings;
+
             return building;
         }
 
@@ -505,11 +544,6 @@ namespace Shard.API.Controllers
         public async Task updateBuildingProgressStatus(Building building, int delayTime)
         {
             await clock.Delay(delayTime, cancellationTokenSource.Token);
-
-            /*if (building.UnitUsed.DestinationPlanet == null)
-            {
-                return;
-            }*/
 
             building.IsBuilt = true;
             building.EstimatedBuildTime = null;
@@ -545,53 +579,32 @@ namespace Shard.API.Controllers
 
             if (building.IsBuilt == false && building.EstimatedBuildTime != null)
             {
-                DateTime now = clock.Now;
-                TimeSpan time = (TimeSpan)(building.EstimatedBuildTime - now);
-
-                if (time <= TimeSpan.FromSeconds(2))
+                if (building.EstimatedBuildTime - clock.Now <= TimeSpan.FromSeconds(2))
                 {
-                    /*if (building.UnitUsed.runningTask != null)
-                    {
-                        await building.UnitUsed.runningTask;
+                    //await building.ConstructionTask;
 
-                        if (building.UnitUsed.System != building.UnitUsed.DestinationSystem || building.UnitUsed.Planet != building.UnitUsed.DestinationPlanet)
+                    while (building.EstimatedBuildTime - clock.Now > TimeSpan.Zero)
+                    {
+                        try
+                        {
+                            building = userBuildings[user].FirstOrDefault(b => b.Id == buildingId) ?? throw new InvalidOperationException();
+                        }
+                        catch (Exception)
                         {
                             return NotFound();
                         }
-                    }*/
 
-                    //CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-                    //building.cancellationToken = cancellationTokenSource;
-                    try
-                    {
-                        //await updateBuildingProgressStatus(building, (int)time.TotalMilliseconds);
-
-                        while (building.EstimatedBuildTime - clock.Now >= TimeSpan.Zero)
-                        {
-                            try
-                            {
-                                int miliseconds = (int)((TimeSpan)(building.EstimatedBuildTime - clock.Now)).TotalMilliseconds;
-                                await clock.Delay((miliseconds > 500 ? 500 : miliseconds), cancellationTokenSource.Token);
-                            }
-                            catch (Exception)
-                            {
-                                return NotFound();
-                            }
-                        }
-                    } catch (TaskCanceledException)
-                    {
-                        if (cancellationTokenSource.IsCancellationRequested)
-                        {
-                            return NotFound();
-                        }
+                        int miliseconds = (int)((TimeSpan)(building.EstimatedBuildTime - clock.Now)).TotalMilliseconds;
+                        await clock.Delay((miliseconds > 500 ? 500 : miliseconds), cancellationTokenSource.Token);
+                        //Thread.Sleep(500);
                     }
-
+                    //await clock.Delay(30000);
                     building.IsBuilt = true;
                     building.EstimatedBuildTime = null;
                 }
             }
 
-            return building;
+            return building == null ? NotFound() : building;
         }
     }
 }
