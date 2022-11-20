@@ -15,27 +15,27 @@ namespace Shard.API.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly List<Systems> systems;
-        private readonly SectorSpecification sector;
-        private readonly List<UserSpecification> users;
-        private readonly Hashtable units;
-        private readonly Dictionary<UserSpecification, List<Building>> userBuildings;
-        private readonly IClock clock;
-        private readonly List<ResourceKind> extractedResources;
-        private readonly List<int> extractionTimes;
-        private readonly CancellationTokenSource cancellationTokenSource;
+        private readonly List<Systems> _systems;
+        private readonly SectorSpecification _sector;
+        private readonly List<UserSpecification> _users;
+        private readonly Hashtable _units;
+        private readonly Dictionary<UserSpecification, List<Building>> _userBuildings;
+        private readonly IClock _clock;
+        private readonly List<ResourceKind> _extractedResources;
+        private readonly List<int> _extractionTimes;
+        private readonly CancellationTokenSource _cancellationTokenSource;
 
         public UsersController(SectorSpecification sector, List<Systems> systems, List<UserSpecification> users, Hashtable units, Dictionary<UserSpecification, List<Building>> userBuildings, IClock systemClock, List<ResourceKind> extractedResources, List<int> extractionTimes, CancellationTokenSource cancellationTokenSource)
         {
-            this.systems = systems;
-            this.sector = sector;
-            this.users = users;
-            this.units = units;
-            clock = systemClock;
-            this.userBuildings = userBuildings;
-            this.extractedResources = extractedResources;
-            this.extractionTimes = extractionTimes;
-            this.cancellationTokenSource = cancellationTokenSource;
+            _systems = systems;
+            _sector = sector;
+            _users = users;
+            _units = units;
+            _clock = systemClock;
+            _userBuildings = userBuildings;
+            _extractedResources = extractedResources;
+            _extractionTimes = extractionTimes;
+            _cancellationTokenSource = cancellationTokenSource;
         }
 
 
@@ -43,7 +43,7 @@ namespace Shard.API.Controllers
         [HttpGet]
         public IReadOnlyList<UserSpecification> Get()
         {
-            return users;
+            return _users;
         }
 
 
@@ -53,7 +53,7 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserSpecification>> Get(string id)
         {
-            var user = users.FirstOrDefault(user => user.Id == id);
+            var user = _users.FirstOrDefault(user => user.Id == id);
 
             if (user == null)
             {
@@ -61,15 +61,15 @@ namespace Shard.API.Controllers
             }
 
             // Calculate the time required to build user's buildings, await necessary time, attribute resource to user
-            foreach (var building in userBuildings[user])
+            foreach (var building in _userBuildings[user])
             {
-                TimeSpan time = (TimeSpan)(clock.Now - building.EstimatedBuildTime);
+                TimeSpan time = (TimeSpan)(_clock.Now - building.EstimatedBuildTime);
                 int minutes = (int)time.TotalMinutes;
 
                 if (time > TimeSpan.FromMinutes(0))
                 {
                     int lastExtractionTime = minutes;
-                    SystemSpecification system = sector.Systems.FirstOrDefault(system => system.Name == building.System);
+                    SystemSpecification system = _sector.Systems.FirstOrDefault(system => system.Name == building.System);
                     PlanetSpecification planet = system.Planets.FirstOrDefault(planet => planet.Name == building.Planet);
                     Dictionary<string, int> userResourcesQuantity = UserSpecification.initiliazeResources();
                     Dictionary<ResourceKind, int> resourcesQuantity = null;
@@ -87,19 +87,19 @@ namespace Shard.API.Controllers
                     else if (building.ResourceCategory == "solid")
                     {
                         // Do not extract anything if no time has passed since the last extraction
-                        if (extractionTimes.LastOrDefault(-1) == lastExtractionTime)
+                        if (_extractionTimes.LastOrDefault(-1) == lastExtractionTime)
                         {
                             break;
                         }
 
                         // If all resources have been extracted (sort by rarity), then re-start from the rarest again
-                        if (extractedResources.Count == planet.ResourceQuantity.Count)
+                        if (_extractedResources.Count == planet.ResourceQuantity.Count)
                         {
-                            extractedResources.Clear();
+                            _extractedResources.Clear();
                         }
 
                         // There is no natural way to sort a dictionary, since it keeps insertion order
-                        resourcesQuantity = planet.ResourceQuantity.Where(entry => entry.Key != ResourceKind.Oxygen && entry.Key != ResourceKind.Water && !extractedResources.Contains(entry.Key)).ToDictionary(entry => entry.Key, entry => entry.Value);
+                        resourcesQuantity = planet.ResourceQuantity.Where(entry => entry.Key != ResourceKind.Oxygen && entry.Key != ResourceKind.Water && !_extractedResources.Contains(entry.Key)).ToDictionary(entry => entry.Key, entry => entry.Value);
                         //resourcesQuantity = resourcesQuantity.OrderBy(x => x.Value).ToDictionary(x => x.Key, x => x.Value);
                         // Due to this we transform it to a list
                         resources = resourcesQuantity.ToList();
@@ -113,15 +113,15 @@ namespace Shard.API.Controllers
                         {
                             KeyValuePair<ResourceKind, int> resourceQuantity = resources.First();
 
-                            if (!extractedResources.Contains(resourceQuantity.Key))
+                            if (!_extractedResources.Contains(resourceQuantity.Key))
                             {
-                                extractedResources.Add(resourceQuantity.Key);
+                                _extractedResources.Add(resourceQuantity.Key);
                             }
 
-                            if (resourcesQuantity[resourceQuantity.Key] > 0 && minutes > 0 && extractionTimes.LastOrDefault(-1) != minutes)
+                            if (resourcesQuantity[resourceQuantity.Key] > 0 && minutes > 0 && _extractionTimes.LastOrDefault(-1) != minutes)
                             {
                                 string resource = resourceQuantity.Key.ToString().ToLower();
-                                minutes -= extractionTimes.LastOrDefault(0);
+                                minutes -= _extractionTimes.LastOrDefault(0);
 
                                 if (minutes > resourcesQuantity[resourceQuantity.Key])
                                 {
@@ -146,7 +146,7 @@ namespace Shard.API.Controllers
                                         if (resourcesQuantity[resourceQuantity.Key] > 0 && minutes > 0)
                                         {
                                             resource = resourceQuantity.Key.ToString().ToLower();
-                                            minutes -= extractionTimes.LastOrDefault(0);
+                                            minutes -= _extractionTimes.LastOrDefault(0);
 
                                             if (minutes > resourcesQuantity[resourceQuantity.Key])
                                             {
@@ -202,9 +202,9 @@ namespace Shard.API.Controllers
                         user.ResourcesQuantity = userResourcesQuantity;
                     }
 
-                    if (!extractionTimes.Contains(lastExtractionTime))
+                    if (!_extractionTimes.Contains(lastExtractionTime))
                     {
-                        extractionTimes.Add(lastExtractionTime);
+                        _extractionTimes.Add(lastExtractionTime);
                     }
                 }
             }
@@ -229,13 +229,13 @@ namespace Shard.API.Controllers
             }
 
             var user = new UserSpecification(userSpecification.Id, userSpecification.Pseudo);
-            users.Add(user);
-            userBuildings.Add(user, new List<Building>());
+            _users.Add(user);
+            _userBuildings.Add(user, new List<Building>());
 
-            SystemSpecification system = sector.Systems[new Random().Next(1, sector.Systems.Count)];
+            SystemSpecification system = _sector.Systems[new Random().Next(1, _sector.Systems.Count)];
 
 
-            units.Add(user, new List<UnitSpecification>()
+            _units.Add(user, new List<UnitSpecification>()
             {
                 new UnitSpecification(Guid.NewGuid().ToString(), "scout", system.Name, null, system.Name, null),
                 new UnitSpecification(Guid.NewGuid().ToString(), "builder", system.Name, null, system.Name, null)
@@ -251,14 +251,14 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<IReadOnlyList<UnitSpecification>> GetUnits(string userId)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
-            if (user == null || units[user] == null)
+            if (user == null || _units[user] == null)
             {
                 return NotFound();
             }
 
-            var userUnits = (List<UnitSpecification>)units[user];
+            var userUnits = (List<UnitSpecification>)_units[user];
 
             if (userUnits == null)
             {
@@ -275,14 +275,14 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UnitSpecification>> GetUnit(string userId, string unitId)
         {
-            UserSpecification user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            UserSpecification user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
-            if (user == null || units[user] == null)
+            if (user == null || _units[user] == null)
             {
                 return NotFound();
             }
 
-            var userUnits = (List<UnitSpecification>)units[user];
+            var userUnits = (List<UnitSpecification>)_units[user];
 
             if (userUnits == null)
             {
@@ -298,13 +298,14 @@ namespace Shard.API.Controllers
 
             if (unit.runningTask != null)
             {
-                DateTime now = clock.Now;
+                DateTime now = _clock.Now;
                 // Get current time representation in seconds
                 int time = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
 
                 if (unit.taskWaitTime - time <= 2)
                 {
                     await unit.runningTask;
+                    unit.runningTask = null;
                 }
             }
 
@@ -316,13 +317,13 @@ namespace Shard.API.Controllers
         {
             if (systemChanged)
             {
-                await clock.Delay(60000);
+                await _clock.Delay(60000);
                 unit.System = unit.DestinationSystem;
             }
 
             if (planetChanged)
             {
-                await clock.Delay(15000);
+                await _clock.Delay(15000);
                 unit.Planet = unit.DestinationPlanet;
             }
         }
@@ -340,14 +341,14 @@ namespace Shard.API.Controllers
                 return BadRequest();
             }
 
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
-            if (user == null || units[user] == null)
+            if (user == null || _units[user] == null)
             {
                 return NotFound();
             }
 
-            var userUnits = (List<UnitSpecification>)units[user];
+            var userUnits = (List<UnitSpecification>)_units[user];
 
             if (userUnits == null)
             {
@@ -361,14 +362,14 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
-            if (userBuildings.ContainsKey(user))
+            if (_userBuildings.ContainsKey(user))
             {
-                var buildings = userBuildings[user].Where(b => b.UnitUsed.Id == unitId).ToList();
+                var buildings = _userBuildings[user].Where(b => b.UnitUsed.Id == unitId).ToList();
                 foreach (var building in buildings.Where(building =>
                              (unit!.Planet != unit.DestinationPlanet && unit.Planet == building.Planet && !building.IsBuilt) ||
                              (unit.System != unit.DestinationSystem && unit.System == building.System && !building.IsBuilt)))
                 {
-                    userBuildings[user].Remove(building);
+                    _userBuildings[user].Remove(building);
                 }
             }
 
@@ -382,7 +383,7 @@ namespace Shard.API.Controllers
             Boolean systemChanged = false;
             Boolean planetChanged = false;
 
-            DateTime now = clock.Now;
+            DateTime now = _clock.Now;
             unit.taskWaitTime = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
 
             if (unit.System != unitSpecification.DestinationSystem)
@@ -412,14 +413,14 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<LocationSpecification> GetLocation(string userId, string unitId)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
-            if (user == null || units[user] == null)
+            if (user == null || _units[user] == null)
             {
                 return NotFound();
             }
 
-            var userUnits = (List<UnitSpecification>)units[user];
+            var userUnits = (List<UnitSpecification>)_units[user];
 
             if (userUnits == null)
             {
@@ -433,7 +434,7 @@ namespace Shard.API.Controllers
                 return NotFound();
             }
 
-            var system = sector.Systems.FirstOrDefault(system => system.Name == unit.System);
+            var system = _sector.Systems.FirstOrDefault(system => system.Name == unit.System);
 
             if (system == null)
             {
@@ -461,7 +462,7 @@ namespace Shard.API.Controllers
                 }
             });*/
 
-            await clock.Delay(300000 + (estimatedMoveTime * 1000));
+            await _clock.Delay(300000 + (estimatedMoveTime * 1000));
             building.IsBuilt = true;
             building.EstimatedBuildTime = null;
             building.ConstructionTask = null;
@@ -475,7 +476,7 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Building> PostBuilding(string userId, [FromBody] BuildingSpecification buildingSpecification)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
             if (user == null)
             {
@@ -489,7 +490,7 @@ namespace Shard.API.Controllers
             }
 
             // Find associated unit and use it as a resource to build a new building
-            var unit = ((List<UnitSpecification>)units[user]).FirstOrDefault(unit => unit.Id == buildingSpecification.BuilderId);
+            var unit = ((List<UnitSpecification>)_units[user]).FirstOrDefault(unit => unit.Id == buildingSpecification.BuilderId);
 
             if (unit == null || unit.Type != "builder" || unit.Planet == null)
             {
@@ -504,13 +505,13 @@ namespace Shard.API.Controllers
             //building.ConstructionTask = buildBuildingBackgroundTask(building, (int) unit.taskWaitTime, user);
 
             List<Building> buildings;
-            if (userBuildings[user] == null)
+            if (_userBuildings[user] == null)
             {
                 buildings = new List<Building>();
             }
             else
             {
-                buildings = userBuildings[user];
+                buildings = _userBuildings[user];
             }
 
             if (!buildings.Contains(building))
@@ -518,7 +519,7 @@ namespace Shard.API.Controllers
                 buildings.Add(building);
             }
 
-            userBuildings[user] = buildings;
+            _userBuildings[user] = buildings;
 
             return building;
         }
@@ -530,20 +531,20 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<List<Building>> GetBuildings(string userId)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
             if (user == null)
             {
                 return NotFound();
             }
 
-            return userBuildings[user];
+            return _userBuildings[user];
         }
 
 
         public async Task updateBuildingProgressStatus(Building building, int delayTime)
         {
-            await clock.Delay(delayTime, cancellationTokenSource.Token);
+            await _clock.Delay(delayTime, _cancellationTokenSource.Token);
 
             building.IsBuilt = true;
             building.EstimatedBuildTime = null;
@@ -556,55 +557,65 @@ namespace Shard.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Building>> GetBuilding(string userId, string buildingId)
         {
-            var user = units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
+            var user = _units.Keys.OfType<UserSpecification>().FirstOrDefault(user => user.Id == userId);
 
             if (user == null)
             {
                 return NotFound();
             }
 
-            var building = userBuildings[user].FirstOrDefault(building => building.Id == buildingId);
+            var building = _userBuildings[user].FirstOrDefault(building => building.Id == buildingId);
 
             if (buildingId == null || building == null)
             {
                 return NotFound();
             }
 
-            // Building which is being constructd must be cancelled, if the unit used for this process has been moved elsewhere
+            // Building which is being constructed must be cancelled, if the unit used for this process has been moved elsewhere
             if (building.UnitUsed.System != building.UnitUsed.DestinationSystem || building.UnitUsed.Planet != building.UnitUsed.DestinationPlanet)
             {
-                userBuildings[user].Remove(building);
+                _userBuildings[user].Remove(building);
                 return NotFound();
             }
 
             if (building.IsBuilt == false && building.EstimatedBuildTime != null)
             {
-                if (building.EstimatedBuildTime - clock.Now <= TimeSpan.FromSeconds(2))
+                if (building.EstimatedBuildTime - _clock.Now <= TimeSpan.FromSeconds(2))
                 {
                     //await building.ConstructionTask;
 
-                    while (building.EstimatedBuildTime - clock.Now > TimeSpan.Zero)
+                    while (building.EstimatedBuildTime - _clock.Now >= TimeSpan.Zero)
                     {
                         try
                         {
-                            building = userBuildings[user].FirstOrDefault(b => b.Id == buildingId) ?? throw new InvalidOperationException();
+                            //building = userBuildings[user].FirstOrDefault(b => b.Id == buildingId) ?? throw new InvalidOperationException();
+                            building.IsBuilt = true;
+                            building.EstimatedBuildTime = null;
+                            //building.UnitUsed.runningTask = null;
+
+                            Thread.Sleep(500);
+
+                            if (building.UnitUsed.runningTask != null || building.EstimatedBuildTime != null || building.IsBuilt == false)
+                            {
+                                //throw new InvalidOperationException();
+                                return NotFound();
+                            }
                         }
                         catch (Exception)
                         {
                             return NotFound();
                         }
 
-                        int miliseconds = (int)((TimeSpan)(building.EstimatedBuildTime - clock.Now)).TotalMilliseconds;
-                        await clock.Delay((miliseconds > 500 ? 500 : miliseconds), cancellationTokenSource.Token);
-                        //Thread.Sleep(500);
+                        /*int miliseconds = (int)((TimeSpan)(building.EstimatedBuildTime - clock.Now)).TotalMilliseconds;
+                        await clock.Delay((miliseconds > 500 ? 500 : miliseconds), cancellationTokenSource.Token);*/
                     }
                     //await clock.Delay(30000);
-                    building.IsBuilt = true;
-                    building.EstimatedBuildTime = null;
+                   /* building.IsBuilt = true;
+                    building.EstimatedBuildTime = null;*/
                 }
             }
 
-            return building == null ? NotFound() : building;
+            return building;
         }
     }
 }
