@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Shard.API.Models;
+using Shard.API.Services;
 using Shard.Shared.Core;
 using System.Collections;
 using System.Resources;
@@ -18,14 +19,15 @@ namespace Shard.API.Controllers
         private readonly List<Systems> _systems;
         private readonly SectorSpecification _sector;
         private readonly List<UserSpecification> _users;
-        private readonly Hashtable _units;
+        private readonly Dictionary<UserSpecification, List<UnitSpecification>> _units;
         private readonly Dictionary<UserSpecification, List<Building>> _userBuildings;
         private readonly IClock _clock;
         private readonly List<ResourceKind> _extractedResources;
         private readonly List<int> _extractionTimes;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly CombatService _combatService;
 
-        public UsersController(SectorSpecification sector, List<Systems> systems, List<UserSpecification> users, Hashtable units, Dictionary<UserSpecification, List<Building>> userBuildings, IClock systemClock, List<ResourceKind> extractedResources, List<int> extractionTimes, CancellationTokenSource cancellationTokenSource)
+        public UsersController(SectorSpecification sector, List<Systems> systems, List<UserSpecification> users, Dictionary<UserSpecification, List<UnitSpecification>> units, Dictionary<UserSpecification, List<Building>> userBuildings, IClock systemClock, List<ResourceKind> extractedResources, List<int> extractionTimes, CancellationTokenSource cancellationTokenSource, CombatService combatService)
         {
             _systems = systems;
             _sector = sector;
@@ -36,6 +38,7 @@ namespace Shard.API.Controllers
             _extractedResources = extractedResources;
             _extractionTimes = extractionTimes;
             _cancellationTokenSource = cancellationTokenSource;
+            _combatService = combatService;
         }
 
 
@@ -329,12 +332,19 @@ namespace Shard.API.Controllers
         }
 
 
+        private async Task weaponFire(CombatUnit damageTaker, CombatUnit damageDealer, int fireDelay)
+        {
+            await _clock.Delay(fireDelay);
+            damageTaker.Health -= damageDealer.Damage;
+        }
+
+
         // PUT: /Users/{userId}/Units/{unitId} - changes the status of a unit of a user. Only changes system and planet which simulates moving
         [HttpPut("{userId}/Units/{unitId}")]
         [ProducesResponseType(typeof(UserSpecification), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<UnitSpecification> PutUnit(string userId, string unitId, [FromBody] UnitSpecification unitSpecification)
+        public async  Task<ActionResult<UnitSpecification>> PutUnit(string userId, string unitId, [FromBody] UnitSpecification unitSpecification)
         {
             if (HttpContext.Request.Body == null || unitSpecification == null || unitSpecification.Id != unitId)
             {
@@ -356,6 +366,35 @@ namespace Shard.API.Controllers
             }
 
             var unit = userUnits.FirstOrDefault(unit => unit.Id == unitId);
+
+            if (unitSpecification.Type == "bomber" || unitSpecification.Type == "cruiser" || unitSpecification.Type == "fighter")
+            {
+                unit = _combatService.createCombatUnit(unitSpecification.Id, unitSpecification.Type, unitSpecification.System, unitSpecification.Planet, unitSpecification.DestinationSystem, unitSpecification.DestinationPlanet);
+                _units[user].Add(unit);
+
+                /*Dictionary<UserSpecification, List<UnitSpecification>> closeUnits = _units.Where(entry => entry.Value)
+                .ToDictionary(i => i.Key, i => i.Value);*/
+
+                foreach (KeyValuePair<UserSpecification, List<UnitSpecification>> entry in _units)
+                {
+                    if (entry.Key != user)
+                    {
+                        List<UnitSpecification> closeUnits = entry.Value.Where(u => u.Type == "bomber" || u.Type == "cruiser" || u.Type == "fighter"
+                        && (unit.Planet == null ? u.System == unit.System : u.System == unit.System && u.Planet == unit.Planet)).ToList();
+
+                        for (int i = 1 ; ; i++)
+                        {
+                            if (_combatService.canFire(unit, i))
+                            {
+                                foreach (var combatUnit in closeUnits)
+                                {
+                                    await weaponFire((CombatUnit) combatUnit, (CombatUnit) unit, i * 1000);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             if (unit == null)
             {
@@ -379,29 +418,32 @@ namespace Shard.API.Controllers
             //cancellationTokenSource.Cancel();
             //}
 
-            // Change the location of a unit
-            Boolean systemChanged = false;
-            Boolean planetChanged = false;
-
-            DateTime now = _clock.Now;
-            unit.taskWaitTime = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
-
-            if (unit.System != unitSpecification.DestinationSystem)
+            if (unitSpecification.Type != "bomber" && unitSpecification.Type != "cruiser" && unitSpecification.Type != "fighter")
             {
-                systemChanged = true;
-                unit.taskWaitTime = unit.taskWaitTime + 60;
+                // Change the location of a unit
+                Boolean systemChanged = false;
+                Boolean planetChanged = false;
+
+                DateTime now = _clock.Now;
+                unit.taskWaitTime = (now.Hour * 60 * 60) + (now.Minute * 60) + now.Second;
+
+                if (unit.System != unitSpecification.DestinationSystem)
+                {
+                    systemChanged = true;
+                    unit.taskWaitTime = unit.taskWaitTime + 60;
+                }
+
+                if (unit.Planet != unitSpecification.DestinationPlanet)
+                {
+                    planetChanged = true;
+                    unit.taskWaitTime = unit.taskWaitTime + 15;
+                }
+
+                unit.DestinationSystem = unitSpecification.DestinationSystem;
+                unit.DestinationPlanet = unitSpecification.DestinationPlanet;
+
+                unit.runningTask = moveUnitBackgroundTask(unit, systemChanged, planetChanged);
             }
-
-            if (unit.Planet != unitSpecification.DestinationPlanet)
-            {
-                planetChanged = true;
-                unit.taskWaitTime = unit.taskWaitTime + 15;
-            }
-
-            unit.DestinationSystem = unitSpecification.DestinationSystem;
-            unit.DestinationPlanet = unitSpecification.DestinationPlanet;
-
-            unit.runningTask = moveUnitBackgroundTask(unit, systemChanged, planetChanged);
 
             return unit;
         }

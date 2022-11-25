@@ -2,6 +2,7 @@ using Bogus;
 using Microsoft.CodeAnalysis;
 using Newtonsoft.Json;
 using Shard.API.Models;
+using Shard.API.Services;
 using Shard.API.Tools;
 using Shard.Shared.Core;
 using System.Collections;
@@ -27,7 +28,7 @@ List<Systems> systems;
 
 var exedir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
 var path = Path.Combine(exedir, @"Shard.Shared.Web.IntegrationTests\expectedTestSectorWithResources.json");
-Console.WriteLine(path); 
+Console.WriteLine(path);
 
 using (StreamReader reader = new StreamReader(AppDomain.CurrentDomain.BaseDirectory + "../../../../Shard.Shared.Web.IntegrationTests/expectedTestSectorWithResources.json"))
 {
@@ -66,7 +67,7 @@ SectorSpecification sectorSpecification = mapGenerator.Generate();
 // Create users list
 List<UserSpecification> users = new List<UserSpecification>();
 // Create units hashtable
-Hashtable units = new Hashtable();
+Dictionary<UserSpecification, List<UnitSpecification>> units = new Dictionary<UserSpecification, List<UnitSpecification>>();
 // Create Dictionary of users with their associated buildings
 Dictionary<UserSpecification, List<Building>> userBuildings = new Dictionary<UserSpecification, List<Building>>();
 
@@ -90,12 +91,13 @@ foreach (var systemInstance in sectorSpecification.Systems)
 builder.Services.AddSingleton<SectorSpecification>(sectorSpecification);
 builder.Services.AddSingleton<List<Systems>>(systems);
 builder.Services.AddSingleton<List<UserSpecification>>(users);
-builder.Services.AddSingleton<Hashtable>(units);
+builder.Services.AddSingleton<Dictionary<UserSpecification, List<UnitSpecification>>>(units);
 builder.Services.AddSingleton<Dictionary<UserSpecification, List<Building>>>(userBuildings);
 builder.Services.AddSingleton<IClock>(new SystemClock());
 builder.Services.AddSingleton<List<ResourceKind>>(new List<ResourceKind>());
 builder.Services.AddSingleton<List<int>>(new List<int>());
 builder.Services.AddSingleton<CancellationTokenSource>(new CancellationTokenSource());
+builder.Services.AddSingleton<CombatService>(new CombatService());
 
 var app = builder.Build();
 
